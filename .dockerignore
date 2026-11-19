@@ -1,0 +1,24 @@
+# Secrets are passed in at run time (env_file in docker-compose.yml), never baked into an image
+.env
+.env.*
+!.env.example
+
+# Local environments, caches, git
+.venv/
+**/__pycache__/
+**/*.pyc
+.git/
+.ipynb_checkpoints/
+.DS_Store
+
+# Large or local data: the index lives in the database volume, not in the image
+data/raw/
+data/parsed/
+data/eval/
+eval/
+notebooks/
+docs/
+tests/
+
+# The UI has its own image (frontend/Dockerfile)
+frontend/

@@ -1,0 +1,48 @@
+# Whole app:        docker compose up --build        -> UI http://localhost:5173, API http://localhost:8000/docs
+# Database only:    docker compose up -d db          (day-to-day development with uv + npm run dev)
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: finsight-db
+    environment:
+      POSTGRES_USER: finsight
+      POSTGRES_PASSWORD: finsight
+      POSTGRES_DB: finsight
+    ports:
+      - "6024:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finsight"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build: .
+    container_name: finsight-api
+    env_file: .env                      # OPENAI_API_KEY, LANGSMITH_*, model names
+    environment:
+      # Inside Docker's network the database is "db" on its normal port, not localhost:6024
+      DATABASE_URL: postgresql+psycopg://finsight:finsight@db:5432/finsight
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  ui:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:8000
+    container_name: finsight-ui
+    ports:
+      - "5173:80"                       # same port as `npm run dev`, so the API's CORS setting still matches
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:

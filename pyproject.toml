@@ -1,0 +1,73 @@
+[project]
+name = "finsight"
+version = "0.1.0"
+description = "Agentic RAG over SEC 10-K filings with cited answers (LangChain, LangGraph, pgvector, RAGAS)"
+readme = "README.md"
+authors = [
+    { name = "SaiAbhinivesh" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    # Serving: everything the API needs at runtime (the Docker image installs only this list)
+    "fastapi>=0.163.2",
+    "langchain>=1.4.9",
+    "langchain-classic>=1.0.8",
+    "langchain-community>=0.4,<0.4.2",
+    "langchain-core>=1.7.6",
+    "langchain-openai>=1.7.4",
+    "langchain-postgres>=0.0.19",
+    "langchain-text-splitters>=1.1.3",
+    "psycopg[binary]>=3.3.8",
+    "pydantic-settings>=2.16.2",
+    "python-dotenv>=1.2.4",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[project.scripts]
+finsight = "finsight:main"
+
+[build-system]
+requires = ["uv_build>=0.13.7,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.4.0",
+    "pytest>=9.2.0",
+    "ruff>=0.17.4",
+]
+# Building the index: PDF parsing (Docling layout models), PyPDF, token counting
+ingest = [
+    "docling>=2.150.0",
+    "docling-core[chunking-openai]>=2.106.0",
+    "pypdf>=7.0.0",
+    "tiktoken>=0.14.0",
+]
+# Evaluation: RAGAS metrics, pandas for the golden set
+eval = [
+    "pandas>=3.1.1",
+    "ragas>=0.4.3",
+]
+# Cross-encoder reranking experiments (M5): pulls in PyTorch
+rerank = [
+    "sentence-transformers>=6.3.0",
+]
+
+[tool.uv]
+# A plain `uv sync` on your machine still installs everything; the Docker image uses --no-default-groups
+default-groups = ["dev", "ingest", "eval", "rerank"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["notebooks"]
+
+[tool.ruff.lint]
+# Real errors (syntax, undefined names, unused imports/variables) + sorted imports.
+# Not selected on purpose: BLE001 (our broad `except Exception` blocks are deliberate: logging, the cache and
+# the guard must never break an answer), ISC004 (multi-line prompt strings), UP031 (one %-formatted prompt).
+select = ["E4", "E7", "E9", "F", "I"]

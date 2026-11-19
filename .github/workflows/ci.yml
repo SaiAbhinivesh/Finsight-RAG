@@ -1,0 +1,44 @@
+# Fast checks on every push to main and every pull request: no API keys, no database, ~2 minutes.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  python:
+    name: Python (lint + unit tests)
+    runs-on: ubuntu-latest
+    env:
+      # Settings() needs these to import; the unit tests never call OpenAI or the database
+      OPENAI_API_KEY: sk-test-not-used
+      DATABASE_URL: postgresql+psycopg://test:test@localhost:5432/test
+      LANGSMITH_TRACING: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Install (serving + dev dependencies only, like the API image)
+        run: uv sync --frozen --no-default-groups --group dev
+      - name: Lint
+        run: uv run ruff check src eval scripts tests
+      - name: Unit tests
+        run: uv run pytest
+
+  frontend:
+    name: Frontend (type check + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build

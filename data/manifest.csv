@@ -1,0 +1,12 @@
+doc_name,company,ticker,fiscal_year,doc_type,sector
+3M_2018_10K,3M,MMM,2018,10-K,Industrials
+3M_2022_10K,3M,MMM,2022,10-K,Industrials
+AMD_2015_10K,AMD,AMD,2015,10-K,Information Technology
+AMD_2022_10K,AMD,AMD,2022,10-K,Information Technology
+AMERICANEXPRESS_2022_10K,American Express,AXP,2022,10-K,Financials
+BOEING_2018_10K,Boeing,BA,2018,10-K,Industrials
+BOEING_2022_10K,Boeing,BA,2022,10-K,Industrials
+PEPSICO_2021_10K,PepsiCo,PEP,2021,10-K,Consumer Staples
+PEPSICO_2022_10K,PepsiCo,PEP,2022,10-K,Consumer Staples
+VERIZON_2021_10K,Verizon,VZ,2021,10-K,Communication Services
+VERIZON_2022_10K,Verizon,VZ,2022,10-K,Communication Services

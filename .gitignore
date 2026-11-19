@@ -1,0 +1,29 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+.env
+data/raw/
+data/parsed/
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+.DS_Store
+
+# Database exports (the CI index is a GitHub release asset, not a git file)
+*.dump
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
+
+# Evaluation outputs: every run writes its CSV / JSONL files here (kept out of git)
+eval/results/*
+!eval/results/.gitkeep

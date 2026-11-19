@@ -1,0 +1,91 @@
+# Evaluation gate: run the guard, safety and scorecard checks against a real index and fail if quality drops
+# below eval/gate_baseline.json. About 30 min and $0.35 per run.
+#
+# Manual by default ("Run workflow" on the Actions tab). Before the first run, in YOUR repository:
+#   1. add the secret OPENAI_API_KEY        (gh secret set OPENAI_API_KEY)
+#   2. publish your index as a release      (see docs/GETTING_STARTED.md, step 12)
+# To run it on every pull request that changes RAG code, uncomment the pull_request block below.
+# (Pull requests from forks never receive secrets, so leave it manual on a public repository.)
+name: Eval gate
+
+on:
+  workflow_dispatch:          # "Run workflow" button on the Actions tab
+  # pull_request:
+  #   paths:
+  #     - "src/**"
+  #     - "eval/**"
+  #     - "pyproject.toml"
+  #     - "uv.lock"
+  #     - "data/manifest.csv"
+  #     - "data/eval/**"
+  #     - ".github/workflows/eval-gate.yml"
+
+concurrency:                  # a new push cancels the gate that is still running for the same branch
+  group: eval-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    name: Eval gate (guard, safety, scorecard)
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      INDEX_RELEASE: ci-index-v1               # GitHub release holding chunks_live.dump; bump when the index changes
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      DATABASE_URL: postgresql+psycopg://finsight:finsight@localhost:6024/finsight
+      PGURL: postgresql://finsight:finsight@localhost:6024/finsight
+      LANGSMITH_TRACING: "false"               # keep CI runs out of the LangSmith project
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: finsight
+          POSTGRES_PASSWORD: finsight
+          POSTGRES_DB: finsight
+        ports:
+          - 6024:5432
+        options: >-
+          --health-cmd "pg_isready -U finsight"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - name: Check the OpenAI key is set
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "::error::Add the OPENAI_API_KEY repository secret: gh secret set OPENAI_API_KEY"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install (serving + dev + eval dependencies)
+        run: uv sync --frozen --no-default-groups --group dev --group eval
+
+      - name: Download the index
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "$INDEX_RELEASE" --pattern chunks_live.dump --dir /tmp
+
+      - name: Restore the index (same pgvector image, so pg_restore matches the server version)
+        run: |
+          docker run --rm --network host pgvector/pgvector:pg16 psql "$PGURL" -c "CREATE EXTENSION IF NOT EXISTS vector;"
+          docker run --rm --network host -v /tmp:/dump pgvector/pgvector:pg16 \
+            pg_restore --no-owner --no-privileges -d "$PGURL" /dump/chunks_live.dump
+          docker run --rm --network host pgvector/pgvector:pg16 psql "$PGURL" -c "SELECT count(*) AS chunks FROM chunks_live;"
+
+      - name: Run the gate
+        run: uv run python eval/gate.py --run ci_${{ github.run_number }}
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-gate-${{ github.run_number }}
+          path: eval/results/*ci_${{ github.run_number }}*
