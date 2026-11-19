@@ -202,6 +202,7 @@ docs/              build guide, milestone notes, experiments, architecture, deci
 | [Glossary](docs/GLOSSARY.md) | RAG concepts in two lines each, mapped to the code |
 | [Interview guide](docs/INTERVIEW_GUIDE.md) | RAG interview questions answered with real numbers |
 | [Ideas](docs/IDEAS.md) | What to build next |
+| [AGENTS.md](AGENTS.md) / [CLAUDE.md](CLAUDE.md) | Guidance for AI coding agents (Claude Code, Codex, Cursor) working in the repo |
 
 ## Build on top of it
 
